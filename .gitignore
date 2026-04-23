@@ -1,0 +1,22 @@
+# Data — too large for GitHub
+Code/data/
+
+# Model weights — too large
+Code/models/saved/*.pth
+Code/models/saved/*.pt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Virtual environment
+venv/
+
+# Test images
+Code/test images/
+
+# Logs
+wandb/
+*.log
