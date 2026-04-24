@@ -1,0 +1,3 @@
+which google-chrome
+which chromium
+which chromium-browser
