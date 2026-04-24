@@ -264,7 +264,7 @@ with st.sidebar:
     }
     .stButton > button[kind="primary"] {
         background: linear-gradient(180deg, #00C4E8 0%, #0078B4 100%);
-        font-size: 16px !important;
+        font-size: 21px !important;
         font-weight: 700 !important;
         letter-spacing: 1.5px !important;
         text-transform: uppercase !important;
@@ -297,10 +297,53 @@ with st.sidebar:
     div[data-testid="stProgress"] > div {
         background-color: #00B4D8;
     }
+    [data-testid="stFileUploader"] {
+        background: linear-gradient(135deg, #0D1F3C, #0A1A30);
+        border: 1.5px solid #1E3A5F;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s ease;
+    }
+    [data-testid="stFileUploader"]:hover {
+        border-color: #00B4D8;
+        background: linear-gradient(135deg, #0A2040, #0D2545);
+    }
+    [data-testid="stFileUploader"] label p {
+        color: white !important;
+        font-size: 21px !important;
+        font-weight: 700 !important;
+        letter-spacing: 1px !important;
+        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
+    }
+    [data-testid="stFileUploader"] label {
+        color: #00B4D8 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background: transparent !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] {
+        color: #8899AA !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] span {
+        color: #00B4D8 !important;
+        font-weight: 600 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    st.subheader("Model Selection")
+    # Model Selection
+    st.markdown("""
+    <div style="background:#0A1628; border-radius:10px; padding:14px;
+         border:1px solid #1E3A5F; margin-bottom:12px">
+        <p style="color:#00B4D8; font-size:16px; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase; margin:0 0 10px 0">
+            Model Selection
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     model_choice = st.radio(
         "Choose model:",
         [
@@ -308,30 +351,104 @@ with st.sidebar:
             "EfficientNet-B3 (Baseline)",
             "Both (Compare)"
         ],
-        index=0
+        index=0,
+        label_visibility="collapsed"
     )
 
-    confidence_threshold = 0.30  # fixed threshold
+    confidence_threshold = 0.30
 
     st.divider()
-    st.subheader("Demo Mode")
+
+    # Demo Mode
+    st.markdown("""
+    <div style="margin-bottom:8px">
+        <p style="color:#00B4D8; font-size:14px; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase; margin:0">
+            Demo Mode
+        </p>
+        <p style="color:#8899AA; font-size:12px; margin:4px 0 0 0">
+            Use pre-selected HAM10000 test images
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     demo_mode = st.toggle("Use demo images", value=False)
 
     if demo_mode:
         demo_images = {
-            "Melanoma (High Risk)":     "data/raw/ham10000/HAM10000_images_part_1/ISIC_0025964.jpg",
-            "Melanocytic Nevi (Low Risk)": "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024306.jpg",
-            "Basal Cell Carcinoma":     "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024310.jpg",
-            "Benign Keratosis":         "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024307.jpg",
-            "Healthy Skin":             "data/raw/kaggle_diseases/Oily-Dry-Skin-Types/train/normal/1 (1).jpg",
+            "Melanoma (High Risk)":        "data/raw/ham10000/HAM10000_images_part_1/ISIC_0025964.jpg",
+            "Melanocytic Nevi (Low Risk)":  "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024306.jpg",
+            "Basal Cell Carcinoma":         "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024310.jpg",
+            "Benign Keratosis":             "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024307.jpg",
+            "Healthy Skin":                 "data/raw/kaggle_diseases/Oily-Dry-Skin-Types/train/normal/1 (1).jpg",
         }
         selected_demo = st.selectbox(
             "Select a demo case:",
-            list(demo_images.keys())
+            list(demo_images.keys()),
+            label_visibility="collapsed"
         )
 
     st.divider()
-    st.warning("For educational purposes only. Not a medical diagnostic tool.")
+
+    # Model Info
+    if "model_choice" not in dir() or model_choice == "ViT-base (Main Model)":
+        arch = "ViT-base-patch16"
+        f1   = "0.7652"
+        acc  = "86%"
+        attn = "Self-Attention"
+    elif model_choice == "EfficientNet-B3 (Baseline)":
+        arch = "EfficientNet-B3"
+        f1   = "0.7440"
+        acc  = "83%"
+        attn = "N/A"
+    else:
+        arch = "ViT + EfficientNet"
+        f1   = "0.7652 / 0.7440"
+        acc  = "86% / 83%"
+        attn = "Self-Attention"
+
+    st.markdown(f"""
+    <div style="background:#0A1628; border-radius:10px; padding:14px;
+         border:1px solid #1E3A5F; margin-bottom:12px">
+        <p style="color:#00B4D8; font-size:16px; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase; margin:0 0 10px 0">
+            Model Info
+        </p>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <span style='color:#8899AA; font-size:15px'>Architecture</span>
+            <span style='color:white; font-size:15px; font-weight:600'>{arch}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <span style='color:#8899AA; font-size:15px'>Test F1</span>
+            <span style='color:#00CC88; font-size:15px; font-weight:600'>{f1}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <span style='color:#8899AA; font-size:15px'>Accuracy</span>
+            <span style='color:#00CC88; font-size:15px; font-weight:600'>{acc}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <span style='color:#8899AA; font-size:15px'>Explainability</span>
+            <span style='color:white; font-size:15px; font-weight:600'>{attn}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <span style='color:#8899AA; font-size:15px'>Classes</span>
+            <span style='color:white; font-size:15px; font-weight:600'>10</span>
+        </div>
+        <div style="display:flex; justify-content:space-between">
+            <span style='color:#8899AA; font-size:15px'>Training Images</span>
+            <span style='color:white; font-size:15px; font-weight:600'>13,215</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+    st.markdown("""
+    <p style="color:#4A5568; font-size:11px; text-align:center">
+        For educational purposes only.<br/>
+        Not a medical diagnostic tool.
+    </p>
+    """, unsafe_allow_html=True)
+
 
 # ── Main ──────────────────────────────────────────────────
 # Header banner
@@ -414,26 +531,6 @@ else:
 )
 
 # Upload or Demo
-st.markdown("""
-<div style="background:linear-gradient(135deg, #0D1F3C, #0A1A30);
-     border-radius:12px; padding:24px 28px;
-     border: 1px solid #1E3A5F; margin-bottom:8px">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
-        <div style="width:3px; height:24px; background:#00B4D8;
-             border-radius:2px"></div>
-        <h3 style="color:white; margin:0; font-size:20px; font-weight:700;
-            letter-spacing:0.3px">
-            Upload Skin Image
-        </h3>
-    </div>
-    <p style="color:#8899AA; margin:0 0 16px 0; font-size:14px; letter-spacing:0.5px;
-        line-height:1.6; padding-left:13px">
-        Upload a close-up photo of the skin lesion
-        &nbsp;•&nbsp; JPG, JPEG, PNG &nbsp;•&nbsp; Max 200MB
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
 image = None
 
 if "demo_mode" in dir() and demo_mode:
@@ -446,12 +543,12 @@ if "demo_mode" in dir() and demo_mode:
         image = Image.open(demo_path)
 else:
     img_file = st.file_uploader(
-        "Choose a skin image",
+        "Upload your Dermoscopy Photo",
         type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed"
     )
     if img_file is not None:
         image = Image.open(img_file)
+
 
 
 if image is not None:
@@ -539,6 +636,18 @@ if image is not None:
         progress.progress(100, text="Done!")
         progress.empty()
 
+        st.markdown(
+            "<div style='display:inline-flex; align-items:center; gap:8px;"
+            "background:#0D1F3C; border:1px solid #00CC88; border-radius:20px;"
+            "padding:8px 18px; margin-bottom:16px'>"
+            "<div style='width:10px; height:10px; background:#00CC88;"
+            "border-radius:50%'></div>"
+            "<span style='color:#00CC88; font-size:14px; font-weight:600;"
+            "letter-spacing:1px'>ANALYSIS COMPLETE</span></div>",
+            unsafe_allow_html=True
+        )
+
+
 
         # ── Single model results ──────────────────────────
         if model_choice != "Both (Compare)":
@@ -594,12 +703,34 @@ if image is not None:
                 )
 
 
+
             if show_attention:
                 st.divider()
-                st.subheader("What the model focused on")
+                st.subheader("What the Model Focused On")
+                st.markdown(
+                    "<p style='color:#8899AA; font-size:13px; margin-bottom:16px'>"
+                    "The attention map shows which regions drove the model prediction — "
+                    "analogous to the ABCDE criteria used by dermatologists. "
+                    "Red/Yellow = High attention | Blue/Purple = Low attention</p>",
+                    unsafe_allow_html=True
+                )
                 c1, c2 = st.columns(2)
-                c1.image(display_img, caption="Preprocessed", width=250)
-                c2.image(overlay, caption="Attention map", width=250)
+                with c1:
+                    st.image(display_img, width=400)
+                    st.markdown(
+                        "<p style='color:#8899AA; font-size:12px; text-align:center;"
+                        "text-transform:uppercase; letter-spacing:1px'>"
+                        "Preprocessed Image</p>",
+                        unsafe_allow_html=True
+                    )
+                with c2:
+                    st.image(overlay, width=400)
+                    st.markdown(
+                        "<p style='color:#00B4D8; font-size:12px; text-align:center;"
+                        "text-transform:uppercase; letter-spacing:1px'>"
+                        "Attention Map</p>",
+                        unsafe_allow_html=True
+                    )
 
             st.divider()
 
@@ -660,24 +791,65 @@ if image is not None:
             for group_name, classes, colors, title_color, group_prob in groups:
                 import io, base64
 
-                # Generate pie chart
-                fig, ax = plt.subplots(figsize=(4, 4))
+                # Generate donut chart
+                fig, ax = plt.subplots(figsize=(5, 5))
                 fig.patch.set_alpha(0)
                 fig.patch.set_facecolor("none")
                 ax.set_facecolor("none")
 
                 vals = [max(probs_dict.get(c, 0), 0.001) for c in classes]
-                wedges, texts, autotexts = ax.pie(
-                    vals, colors=colors,
-                    autopct="%1.1f%%", startangle=90,
-                    textprops={"color": "white", "fontsize": 13},
-                    wedgeprops={"edgecolor": "#0A1628", "linewidth": 2},
-                    pctdistance=0.72
+
+                # 3D Donut chart
+                # Shadow layer
+                shadow_result = ax.pie(
+                    vals,
+                    colors=["#000000"] * len(vals),
+                    startangle=88,
+                    radius=1.02,
+                    wedgeprops={"edgecolor": "none", "linewidth": 0,
+                               "width": 0.58, "alpha": 0.3}
                 )
+
+                # Main donut
+                wedges, texts, autotexts = ax.pie(
+                    vals,
+                    colors=colors,
+                    autopct="%1.1f%%",
+                    startangle=90,
+                    pctdistance=0.75,
+                    textprops={"color": "white", "fontsize": 12, "fontweight": "bold"},
+                    wedgeprops={"edgecolor": "none", "linewidth": 0,
+                               "width": 0.55, "antialiased": True}
+                )
+
+                # Highlight edge (lighter inner ring)
+                highlight_result = ax.pie(
+                    vals,
+                    colors=["white"] * len(vals),
+                    startangle=90,
+                    radius=0.46,
+                    wedgeprops={"edgecolor": "none", "linewidth": 0,
+                               "width": 0.04, "alpha": 0.15}
+                )
+
                 for at in autotexts:
                     at.set_color("white")
-                    at.set_fontsize(13)
+                    at.set_fontsize(12)
                     at.set_fontweight("bold")
+
+                # Center circle for depth
+                center_circle = plt.Circle((0, 0), 0.42,
+                                          fc="#0A1628", zorder=10)
+                ax.add_patch(center_circle)
+
+                # Center text
+                ax.text(0, 0.08, f"{group_prob*100:.0f}%",
+                       ha="center", va="center",
+                       fontsize=22, fontweight="bold", color="white",
+                       zorder=11)
+                ax.text(0, -0.18, "of total",
+                       ha="center", va="center",
+                       fontsize=10, color="#8899AA", zorder=11)
 
                 plt.tight_layout()
                 buf = io.BytesIO()
@@ -687,47 +859,51 @@ if image is not None:
                 img_b64 = base64.b64encode(buf.read()).decode()
                 plt.close()
 
-                # Card container
-                st.markdown(
-                    f"<div style='background:#0D1F3C; border-radius:12px; "
-                    f"border:1px solid #1E3A5F; padding:20px; margin-bottom:16px'>"
-                    f"<div style='color:{title_color}; font-size:20px; "
-                    f"font-weight:700; margin-bottom:16px; letter-spacing:0.5px'>"
-                    f"{group_name} &nbsp;—&nbsp; {group_prob*100:.1f}%</div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
+                # Card with donut + list
                 col_pie, col_list = st.columns([1, 1])
 
                 with col_pie:
                     st.markdown(
+                        f"<div style='background:#0D1F3C; border-radius:12px;"
+                        f"border:1px solid {title_color}44; padding:16px;"
+                        f"text-align:center; margin-bottom:16px'>"
+                        f"<div style='color:{title_color}; font-size:16px;"
+                        f"font-weight:700; margin-bottom:12px; letter-spacing:1px'>"
+                        f"{group_name}</div>"
                         f"<img src='data:image/png;base64,{img_b64}' "
-                        f"style='width:280px; height:280px; display:block; margin:auto'/>",
+                        f"style='width:280px; height:280px; display:block; margin:auto'/>"
+                        f"</div>",
                         unsafe_allow_html=True
                     )
 
                 with col_list:
+                    st.markdown(
+                        f"<div style='background:#0D1F3C; border-radius:12px;"
+                        f"border:1px solid #1E3A5F; padding:16px; margin-bottom:16px'>",
+                        unsafe_allow_html=True
+                    )
                     st.write("")
                     for cls, color in zip(classes, colors):
                         prob = probs_dict.get(cls, 0)
+                        pct = prob * 100
                         st.markdown(
-                            f"<div style='display:flex; align-items:center; "
-                            f"margin:12px 0; padding:8px; background:#0A1628; "
-                            f"border-radius:8px'>"
-                            f"<div style='width:18px; height:18px; background:{color}; "
-                            f"border-radius:4px; margin-right:12px; flex-shrink:0'></div>"
-                            f"<div>"
-                            f"<div style='color:white; font-size:15px; font-weight:600'>"
-                            f"{CLASS_INFO[cls]['name']}</div>"
-                            f"<div style='color:#8899AA; font-size:13px'>"
-                            f"{prob*100:.1f}%</div>"
-                            f"</div></div>",
+                            f"<div style='margin:10px 0'>"
+                            f"<div style='display:flex; align-items:center;"
+                            f"justify-content:space-between; margin-bottom:4px'>"
+                            f"<div style='display:flex; align-items:center; gap:8px'>"
+                            f"<div style='width:12px; height:12px; background:{color};"
+                            f"border-radius:3px; flex-shrink:0'></div>"
+                            f"<span style='color:white; font-size:14px; font-weight:600'>"
+                            f"{CLASS_INFO[cls]['name']}</span></div>"
+                            f"<span style='color:{color}; font-size:14px; font-weight:700'>"
+                            f"{pct:.1f}%</span></div>"
+                            f"<div style='background:#1A2F4A; border-radius:4px; height:6px'>"
+                            f"<div style='width:{min(pct*3, 100):.1f}%; background:{color};"
+                            f"border-radius:4px; height:6px'></div></div>"
+                            f"</div>",
                             unsafe_allow_html=True
                         )
-
-                st.markdown("<div style='margin-bottom:8px'></div>",
-                           unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
 
         # ── Comparison mode ───────────────────────────────
