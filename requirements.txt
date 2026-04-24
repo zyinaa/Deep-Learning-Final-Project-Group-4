@@ -1,0 +1,15 @@
+torch==2.0.1
+torchvision==0.15.2
+transformers>=4.30.0
+albumentations
+opencv-python-headless
+Pillow
+scikit-learn
+pandas
+numpy
+matplotlib
+streamlit
+huggingface_hub
+tqdm
+timm
+reportlab
