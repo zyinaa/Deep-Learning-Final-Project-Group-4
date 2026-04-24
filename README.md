@@ -1,45 +1,69 @@
-# Skin Cancer Risk Classification Using Vision Transformer (ViT)
+<p align="center">
+  <img src="icon.png" alt="DermAI Logo" width="120"/>
+</p>
 
-**Deep Learning Final Project — Group 4**  
-**Course:** DATS 6303 Deep Learning | George Washington University  
-**Instructor:** Prof. Amir Jafari  
+<h1 align="center">DermAI</h1>
+<p align="center">
+  <b>Skin Cancer Risk Classification System</b><br/>
+  <sub>Powered by Vision Transformer (ViT-base-patch16-224)</sub>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Model-ViT--base--patch16--224-00B4D8?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Dataset-HAM10000-1D9E75?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Classes-10-EF9F27?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Test_F1-0.7652-E24B4A?style=flat-square"/>
+  <img src="https://img.shields.io/badge/GWU-DATS_6303-0D1F3C?style=flat-square"/>
+</p>
 
 ---
 
-## Project Overview
+## Overview
 
-A multi-class skin condition classifier that uses a fine-tuned **Vision Transformer (ViT-base-patch16-224)** to classify 10 skin conditions and compute a **Cancer Risk Score (0–100)**. The system provides explainable predictions through attention map visualization, showing exactly which regions of the image drove the model's decision.
+**DermAI** is a skin cancer risk classification system that uses a fine-tuned **Vision Transformer (ViT-base-patch16-224)** to classify 10 skin conditions and compute a **Cancer Risk Score (0–100)**. The system provides explainable predictions through attention map visualization, showing exactly which regions of the image drove the model's decision.
 
 ### Key Features
-- 10-class skin condition classification
-- Cancer Risk Score weighted by clinical malignancy severity
-- Attention map visualization for model explainability
-- Real-time inference via Streamlit web application
-- Live camera capture support for mobile use
+- **10-class** skin condition classification
+- **Cancer Risk Score** (0–100) weighted by clinical malignancy severity
+- **Attention map** visualization for model explainability
+- **Risk group distribution** with interactive pie charts
+- **PDF report** generation with charts and analysis
+- **Model comparison** between ViT-base and EfficientNet-B3
+- **Real-time inference** via Streamlit web application
+
+---
+
+## Demo
+
+> Upload a close-up photo of a skin lesion and get an instant cancer risk assessment with attention map visualization.
+
+```
+https://huggingface.co/spaces/zyinaa/skin-cancer-risk-analyser
+```
 
 ---
 
 ## Results
 
-| Model | Test Macro F1 | Accuracy |
-|---|---|---|
-| **ViT-base-patch16-224** | **0.7652** | **86%** |
-| EfficientNet-B3 (baseline) | 0.7440 | 83% |
+| Model | Test Macro F1 | Accuracy | Status |
+|---|---|---|---|
+| **ViT-base-patch16-224** | **0.7652** | **86%** | Main Model |
+| EfficientNet-B3 | 0.7440 | 83% | Baseline |
 
 ### Per-Class Performance (ViT)
 
-| Class | F1 Score |
-|---|---|
-| Healthy Skin | 1.00 |
-| Squamous Cell Carcinoma | 0.95 |
-| Vascular Lesion | 0.90 |
-| Melanocytic Nevi | 0.91 |
-| Tinea/Ringworm | 0.87 |
-| Basal Cell Carcinoma | 0.73 |
-| Benign Keratosis | 0.68 |
-| Melanoma | 0.54 |
-| Actinic Keratosis | 0.57 |
-| Dermatofibroma | 0.50 |
+| Class | Risk Group | F1 Score |
+|---|---|---|
+| Healthy Skin | Low | 1.00 |
+| Squamous Cell Carcinoma | High | 0.95 |
+| Vascular Lesion | Low | 0.90 |
+| Melanocytic Nevi | Medium | 0.91 |
+| Tinea/Ringworm | Low | 0.87 |
+| Basal Cell Carcinoma | High | 0.73 |
+| Benign Keratosis | Medium | 0.68 |
+| Melanoma | High | 0.54 |
+| Actinic Keratosis | Medium | 0.57 |
+| Dermatofibroma | Low | 0.50 |
 
 ---
 
@@ -67,18 +91,18 @@ A multi-class skin condition classifier that uses a fine-tuned **Vision Transfor
 
 ## 10 Classes and Cancer Risk Weights
 
-| Class | Code | Source | Risk Weight |
-|---|---|---|---|
-| Melanoma | mel | HAM10000 | 1.00 |
-| Squamous Cell Carcinoma | scc | Kaggle | 0.90 |
-| Basal Cell Carcinoma | bcc | HAM10000 | 0.80 |
-| Actinic Keratosis | akiec | HAM10000 | 0.65 |
-| Benign Keratosis | bkl | HAM10000 | 0.10 |
-| Melanocytic Nevi | nv | HAM10000 | 0.10 |
-| Dermatofibroma | df | HAM10000 | 0.05 |
-| Vascular Lesion | vasc | HAM10000 | 0.05 |
-| Tinea/Ringworm | tinea | Kaggle | 0.00 |
-| Healthy Skin | normal | Kaggle | 0.00 |
+| Class | Code | Source | Risk Weight | Risk Group |
+|---|---|---|---|---|
+| Melanoma | mel | HAM10000 | 1.00 | 🔴 High |
+| Squamous Cell Carcinoma | scc | Kaggle | 0.90 | 🔴 High |
+| Basal Cell Carcinoma | bcc | HAM10000 | 0.80 | 🔴 High |
+| Actinic Keratosis | akiec | HAM10000 | 0.65 | 🟡 Medium |
+| Benign Keratosis | bkl | HAM10000 | 0.10 | 🟡 Medium |
+| Melanocytic Nevi | nv | HAM10000 | 0.10 | 🟡 Medium |
+| Dermatofibroma | df | HAM10000 | 0.05 | 🟢 Low |
+| Vascular Lesion | vasc | HAM10000 | 0.05 | 🟢 Low |
+| Tinea/Ringworm | tinea | Kaggle | 0.00 | 🟢 Low |
+| Healthy Skin | normal | Kaggle | 0.00 | 🟢 Low |
 
 **Cancer Risk Score** = Σ(P(class_i) × weight_i) × 100
 
@@ -97,16 +121,13 @@ A multi-class skin condition classifier that uses a fine-tuned **Vision Transfor
 ### Two-Phase Fine-tuning Strategy
 ```
 Phase 1 (5 epochs):
-  - Freeze ViT encoder
-  - Train classification head only
-  - Learning rate: 1e-3
+  Freeze ViT encoder → Train classification head only
+  Learning rate: 1e-3
 
 Phase 2 (25 epochs):
-  - Unfreeze all layers
-  - Full fine-tuning
-  - Learning rate: 5e-5
-  - CosineAnnealingLR scheduler
-  - Label smoothing: 0.1
+  Unfreeze all layers → Full fine-tuning
+  Learning rate: 5e-5
+  CosineAnnealingLR + Label smoothing 0.1
 ```
 
 ---
@@ -115,27 +136,27 @@ Phase 2 (25 epochs):
 
 ```
 Deep-Learning-Final-Project-Group-4/
+├── icon.png                        # DermAI logo
+├── README.md
 ├── Group-Proposal/
-│   └── Group-Proposal.pdf
 ├── Final-Group-Project-Report/
-│   └── (to be added)
 ├── Final-Group-Presentation/
-│   └── (to be added)
 └── Code/
     ├── preprocessing/
-    │   ├── dataset.py          # Dataset class, transforms, data loading
-    │   └── transforms.py       # Augmentation pipeline
+    │   ├── dataset.py              # Dataset class, transforms, data loading
+    │   └── transforms.py
     ├── training/
-    │   ├── train_vit.py        # ViT fine-tuning (Phase 1 + Phase 2)
-    │   └── train_efficientnet.py # EfficientNet-B3 baseline
+    │   ├── train_vit.py            # ViT fine-tuning (Phase 1 + Phase 2)
+    │   └── train_efficientnet.py   # EfficientNet-B3 baseline
     ├── models/
-    │   └── saved/              # Saved model weights (not on GitHub)
+    │   └── saved/                  # Model weights (not on GitHub)
     ├── evaluation/
-    │   └── evaluate.py         # Metrics, confusion matrix, attention maps
+    │   └── evaluate.py
     ├── app/
-    │   └── app.py              # Streamlit web application
+    │   ├── app.py                  # DermAI Streamlit application
+    │   └── icon.png                # App icon
     └── notebooks/
-        └── eda.ipynb           # Exploratory data analysis
+        └── eda.ipynb
 ```
 
 ---
@@ -153,70 +174,49 @@ cd Deep-Learning-Final-Project-Group-4
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 3. Install PyTorch (CUDA 11.8)
-```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
-### 4. Download Data
+### 3. Download Data
 ```bash
-# Requires Kaggle API credentials
 kaggle datasets download -d kmader/skin-cancer-mnist-ham10000 -p Code/data/raw/ham10000 --unzip
 kaggle datasets download -d haroonalam16/20-skin-diseases-dataset -p Code/data/raw/kaggle_diseases --unzip
 kaggle datasets download -d shakyadissanayake/oily-dry-and-normal-skin-types-dataset -p Code/data/raw/kaggle_diseases --unzip
 ```
 
-### 5. Train Models
+### 4. Train Models
 ```bash
 cd Code
-
-# Train EfficientNet-B3 baseline
-python3 training/train_efficientnet.py
-
-# Train ViT (main model)
-python3 training/train_vit.py
+python3 training/train_efficientnet.py   # Baseline
+python3 training/train_vit.py            # Main model
 ```
 
-### 6. Run Streamlit App
+### 5. Run DermAI
 ```bash
-streamlit run app/app.py --server.port 8501 --server.address 0.0.0.0
+streamlit run Code/app/app.py --server.port 8501 --server.address 0.0.0.0
 ```
 
 ---
 
-## Preprocessing Pipeline
+## DermAI Features
 
-1. **Center crop** — Square crop to remove borders
-2. **CLAHE** — Contrast Limited Adaptive Histogram Equalization
-3. **Resize** — 224×224 for ViT input
-4. **Augmentation** (training only):
-   - Random rotate, flip, shift/scale
-   - Elastic transform, grid distortion
-   - Color jitter, Gaussian noise/blur
-   - Coarse dropout
-5. **Normalization** — ImageNet mean/std
-
----
-
-## Streamlit App
-
-The web application provides:
-- **Live camera capture** via `st.camera_input()`
-- **Image upload** for saved images
-- **Cancer Risk Score** (0–100 gauge)
-- **Class probability bars** for all 10 classes
-- **Attention map overlay** showing model focus regions
-- **Risk level** (Low / Moderate / Elevated / High)
-
-### Risk Level Thresholds
+### Cancer Risk Score
+A weighted probability score (0–100) based on clinical malignancy severity:
 | Score | Level | Color |
 |---|---|---|
-| 0–20 | Low Risk | Green |
-| 20–50 | Moderate Risk | Amber |
-| 50–75 | Elevated Risk | Orange |
-| 75–100 | High Risk | Red |
+| 0–20 | Low Risk | 🟢 Green |
+| 20–50 | Moderate Risk | 🟡 Yellow |
+| 50–75 | Elevated Risk | 🟠 Orange |
+| 75–100 | High Risk | 🔴 Red |
+
+### Attention Map
+ViT's self-attention weights overlaid on the input image, showing which regions drove the prediction — analogous to the ABCDE criteria used by dermatologists.
+
+### PDF Report
+Downloadable report including risk summary, group distribution pie charts, class probability bar chart, and detailed analysis.
+
+### Model Comparison
+Side-by-side comparison between ViT-base (main model) and EfficientNet-B3 (baseline).
 
 ---
 
@@ -228,30 +228,6 @@ GPU:       NVIDIA A10G (23.6 GB VRAM)
 CUDA:      11.8
 PyTorch:   2.7.1+cu118
 Python:    3.12.3
-OS:        Ubuntu 24.04
-```
-
----
-
-## Dependencies
-
-```
-torch>=2.7.0
-torchvision
-transformers>=4.30.0
-albumentations
-opencv-python
-Pillow
-scikit-learn
-pandas
-numpy
-matplotlib
-seaborn
-streamlit
-kagglehub
-tqdm
-wandb
-timm
 ```
 
 ---
@@ -260,18 +236,17 @@ timm
 
 ```bibtex
 @article{tschandl2018ham10000,
-  title={The HAM10000 dataset, a large collection of multi-source 
+  title={The HAM10000 dataset, a large collection of multi-source
          dermatoscopic images of common pigmented skin lesions},
   author={Tschandl, Philipp and Rosendahl, Cliff and Kittler, Harald},
   journal={Scientific data},
   volume={5},
   pages={180161},
-  year={2018},
-  publisher={Nature Publishing Group}
+  year={2018}
 }
 
 @article{dosovitskiy2020vit,
-  title={An image is worth 16x16 words: Transformers for image 
+  title={An image is worth 16x16 words: Transformers for image
          recognition at scale},
   author={Dosovitskiy, Alexey and others},
   journal={arXiv preprint arXiv:2010.11929},
@@ -285,16 +260,18 @@ timm
 
 | Member | Responsibilities |
 |---|---|
-| Member 1 | Dataset pipeline, ViT fine-tuning, EfficientNet baseline, cancer risk score, attention maps, model evaluation |
-| Member 2 | EDA, data augmentation, Streamlit app, demo preparation, report sections 1–2 |
+| Enoch Yin | Dataset pipeline, ViT fine-tuning, EfficientNet baseline, cancer risk score, attention maps, model evaluation, deployment |
+| Gary Liang | EDA, data augmentation, Streamlit app, demo preparation, report |
 
 ---
 
 ## License
 
-This project is for educational purposes as part of GWU DATS 6303 Deep Learning course.  
-HAM10000 dataset is licensed under CC-BY-NC-SA-4.0.
+Educational use only — GWU DATS 6303 Deep Learning | Spring 2026
+HAM10000 dataset licensed under CC-BY-NC-SA-4.0
 
 ---
 
-*GWU DATS 6303 Deep Learning | Spring 2026*# Deep-Learning-Final-Project-Group-4
+<p align="center">
+  <sub>Built with ViT · HAM10000 · Streamlit · PyTorch</sub>
+</p>
