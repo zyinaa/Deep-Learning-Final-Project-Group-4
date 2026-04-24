@@ -1,5 +1,6 @@
-torch==2.0.1
-torchvision==0.15.2
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 transformers>=4.30.0
 albumentations
 opencv-python-headless
