@@ -136,6 +136,30 @@ def create_gauge(score, level, color):
     return fig
 
 
+def section_header(title, color="#00B4D8"):
+    st.markdown(
+        f"<div style='display:flex; align-items:center; gap:12px; "
+        f"margin:24px 0 16px 0'>"
+        f"<div style='width:4px; height:28px; background:{color}; "
+        f"border-radius:2px; flex-shrink:0'></div>"
+        f"<span style='color:white; font-size:20px; font-weight:700'>"
+        f"{title}</span></div>",
+        unsafe_allow_html=True
+    )
+
+
+def section_header(title, color="#00B4D8"):
+    st.markdown(
+        f"<div style='display:flex; align-items:center; gap:12px; "
+        f"margin:24px 0 16px 0'>"
+        f"<div style='width:4px; height:28px; background:{color}; "
+        f"border-radius:2px; flex-shrink:0'></div>"
+        f"<span style='color:white; font-size:20px; font-weight:700'>"
+        f"{title}</span></div>",
+        unsafe_allow_html=True
+    )
+
+
 @st.cache_resource
 def load_vit():
     model = ViTForImageClassification.from_pretrained(
@@ -263,14 +287,22 @@ with st.sidebar:
         
     }
     .stButton > button[kind="primary"] {
-        background: linear-gradient(180deg, #00C4E8 0%, #0078B4 100%);
-        font-size: 21px !important;
-        font-weight: 700 !important;
-        letter-spacing: 1.5px !important;
+        background: #0A1628 !important;
+        border: 2px solid #00B4D8 !important;
+        color: #00B4D8 !important;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        letter-spacing: 4px !important;
         text-transform: uppercase !important;
-        padding: 12px 24px !important;
+        padding: 14px 28px !important;
         border-radius: 8px !important;
-        
+        transition: all 0.2s ease !important;
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: #00B4D8 !important;
+        color: white !important;
+        border-color: #00B4D8 !important;
     }
     .stDownloadButton > button {
         background: linear-gradient(180deg, #1DB87A 0%, #158A5A 100%);
@@ -331,6 +363,23 @@ with st.sidebar:
         font-weight: 600 !important;
     }
     </style>
+    <script>
+    function addPulse() {
+        const btns = window.parent.document.querySelectorAll('button[kind="primary"]');
+        btns.forEach(btn => {
+            btn.style.cssText += `
+                background: #00B4D8 !important;
+                font-weight: 900 !important;
+                font-size: 18px !important;
+                letter-spacing: 3px !important;
+                position: relative !important;
+                overflow: hidden !important;
+            `;
+        });
+    }
+    setTimeout(addPulse, 1000);
+    setInterval(addPulse, 2000);
+    </script>
     """, unsafe_allow_html=True)
 
     # Model Selection
@@ -354,6 +403,13 @@ with st.sidebar:
         index=0,
         label_visibility="collapsed"
     )
+
+    # Reset results when model changes
+    if "last_model_choice" not in st.session_state:
+        st.session_state.last_model_choice = model_choice
+    if st.session_state.last_model_choice != model_choice:
+        st.session_state.results = None
+        st.session_state.last_model_choice = model_choice
 
     confidence_threshold = 0.30
 
@@ -387,6 +443,12 @@ with st.sidebar:
             list(demo_images.keys()),
             label_visibility="collapsed"
         )
+
+        # Reset when demo image changes
+        if st.session_state.get("last_demo") != selected_demo:
+            st.session_state.results = None
+            st.session_state.analysis_done = False
+            st.session_state.last_demo = selected_demo
 
     st.divider()
 
@@ -547,6 +609,11 @@ else:
         type=["jpg", "jpeg", "png"],
     )
     if img_file is not None:
+        # Reset results when new image uploaded
+        if "last_img" not in st.session_state or st.session_state.last_img != img_file.name:
+            st.session_state.results = None
+            st.session_state.analysis_done = False
+            st.session_state.last_img = img_file.name
         image = Image.open(img_file)
 
 
@@ -561,7 +628,7 @@ if image is not None:
         st.write("")
         st.write("")
         analyse_btn = st.button(
-            "ANALYSE",
+            "SCAN",
             type="primary",
             use_container_width=True
         )
@@ -646,6 +713,45 @@ if image is not None:
             "letter-spacing:1px'>ANALYSIS COMPLETE</span></div>",
             unsafe_allow_html=True
         )
+        st.session_state.analysis_done = True
+
+        # Clinical Recommendations
+        RECOMMENDATIONS = {
+            "low": {
+                "color": "#00CC88",
+                "icon": "✓",
+                "title": "Low Risk — Routine Monitoring",
+                "actions": [
+                    "Continue monthly self-examination",
+                    "Annual full-body skin check with a dermatologist",
+                    "Use SPF 30+ sunscreen daily",
+                    "Document any changes in size, shape, or color",
+                ]
+            },
+            "moderate": {
+                "color": "#FFD700",
+                "icon": "⚠",
+                "title": "Moderate Risk — Schedule a Check-up",
+                "actions": [
+                    "Schedule a dermatologist appointment within 1–3 months",
+                    "Photograph the lesion to track changes over time",
+                    "Avoid UV exposure and use SPF 50+ sunscreen",
+                    "Do not attempt to remove or treat the lesion yourself",
+                ]
+            },
+            "high": {
+                "color": "#FF2D2D",
+                "icon": "✗",
+                "title": "High Risk — Seek Immediate Consultation",
+                "actions": [
+                    "Consult a dermatologist as soon as possible",
+                    "Consider requesting a dermoscopy evaluation",
+                    "A biopsy may be required for definitive diagnosis",
+                    "Do not delay — early detection significantly improves outcomes",
+                ]
+            }
+        }
+
 
 
 
@@ -655,6 +761,35 @@ if image is not None:
             top_cls    = max(probs_dict, key=probs_dict.get)
             confidence = probs_dict[top_cls]
             level, color, icon = get_risk_level(risk_score)
+
+            # Show clinical recommendation
+            if risk_score < 20:
+                rec = RECOMMENDATIONS["low"]
+            elif risk_score < 50:
+                rec = RECOMMENDATIONS["moderate"]
+            else:
+                rec = RECOMMENDATIONS["high"]
+
+            actions_html = "".join([
+                f"<div style='display:flex; align-items:flex-start; gap:10px; margin:8px 0'>"
+                f"<div style='width:6px; height:6px; background:{rec['color']}; "
+                f"border-radius:50%; margin-top:6px; flex-shrink:0'></div>"
+                f"<span style='color:#CCDDEE; font-size:17px'>{a}</span></div>"
+                for a in rec["actions"]
+            ])
+
+            st.markdown(
+                f"<div style='background:#0D1F3C; border-radius:12px; padding:20px;"
+                f"border:1px solid {rec['color']}44; margin-bottom:16px'>"
+                f"<div style='color:{rec['color']}; font-size:19px; font-weight:700;"
+                f"margin-bottom:12px'>{rec['icon']} {rec['title']}</div>"
+                f"{actions_html}"
+                f"<p style='color:#4A5568; font-size:11px; margin-top:12px; margin-bottom:0'>"
+                f"AI-generated guidance only. Always consult a qualified dermatologist.</p>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
 
             # Save to session state
             st.session_state.results = {
@@ -671,7 +806,7 @@ if image is not None:
             st.session_state.display_img = display_img
             st.session_state.overlay = overlay
 
-            st.subheader(f"Results — {model_label}")
+            section_header(f"Results — {model_label}")
 
             col_gauge, col_info = st.columns([1, 2])
             with col_gauge:
@@ -703,10 +838,18 @@ if image is not None:
                 )
 
 
+            if confidence < confidence_threshold:
+                st.warning(
+                    f"Confidence {confidence*100:.1f}% is below threshold. "
+                    "Result may be unreliable."
+                )
+
+
+
 
             if show_attention:
                 st.divider()
-                st.subheader("What the Model Focused On")
+                section_header("What the Model Focused On")
                 st.markdown(
                     "<p style='color:#8899AA; font-size:13px; margin-bottom:16px'>"
                     "The attention map shows which regions drove the model prediction — "
@@ -759,7 +902,7 @@ if image is not None:
                 ("Low Risk",    LOW_RISK,    ["#1D9E75","#27AE60","#2ECC71","#58D68D"], "#1D9E75", low_prob),
             ]
 
-            st.subheader("Class Probabilities")
+            section_header("Class Probabilities")
             HIGH_RISK_C   = ["mel", "scc", "bcc"]
             MEDIUM_RISK_C = ["akiec", "bkl", "nv"]
             for cls, prob in sorted(
@@ -786,7 +929,7 @@ if image is not None:
                 )
 
             st.divider()
-            st.subheader("Risk Group Distribution")
+            section_header("Risk Group Distribution")
 
             for group_name, classes, colors, title_color, group_prob in groups:
                 import io, base64
@@ -810,17 +953,15 @@ if image is not None:
                                "width": 0.58, "alpha": 0.3}
                 )
 
-                # Main donut
-                wedges, texts, autotexts = ax.pie(
+                # Main donut - no labels inside
+                wedges, texts = ax.pie(
                     vals,
                     colors=colors,
-                    autopct="%1.1f%%",
                     startangle=90,
-                    pctdistance=0.75,
-                    textprops={"color": "white", "fontsize": 12, "fontweight": "bold"},
                     wedgeprops={"edgecolor": "none", "linewidth": 0,
                                "width": 0.55, "antialiased": True}
                 )
+
 
                 # Highlight edge (lighter inner ring)
                 highlight_result = ax.pie(
@@ -831,11 +972,6 @@ if image is not None:
                     wedgeprops={"edgecolor": "none", "linewidth": 0,
                                "width": 0.04, "alpha": 0.15}
                 )
-
-                for at in autotexts:
-                    at.set_color("white")
-                    at.set_fontsize(12)
-                    at.set_fontweight("bold")
 
                 # Center circle for depth
                 center_circle = plt.Circle((0, 0), 0.42,
@@ -877,16 +1013,11 @@ if image is not None:
                     )
 
                 with col_list:
-                    st.markdown(
-                        f"<div style='background:#0D1F3C; border-radius:12px;"
-                        f"border:1px solid #1E3A5F; padding:16px; margin-bottom:16px'>",
-                        unsafe_allow_html=True
-                    )
-                    st.write("")
+                    list_items = ""
                     for cls, color in zip(classes, colors):
                         prob = probs_dict.get(cls, 0)
                         pct = prob * 100
-                        st.markdown(
+                        list_items += (
                             f"<div style='margin:10px 0'>"
                             f"<div style='display:flex; align-items:center;"
                             f"justify-content:space-between; margin-bottom:4px'>"
@@ -898,12 +1029,17 @@ if image is not None:
                             f"<span style='color:{color}; font-size:14px; font-weight:700'>"
                             f"{pct:.1f}%</span></div>"
                             f"<div style='background:#1A2F4A; border-radius:4px; height:6px'>"
-                            f"<div style='width:{min(pct*3, 100):.1f}%; background:{color};"
+                            f"<div style='width:{min(prob/max(group_prob,0.001)*100, 100):.1f}%; background:{color};"
                             f"border-radius:4px; height:6px'></div></div>"
-                            f"</div>",
-                            unsafe_allow_html=True
+                            f"</div>"
                         )
-                    st.markdown("</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='background:#0D1F3C; border-radius:12px;"
+                        f"border:1px solid #1E3A5F; padding:16px; margin-bottom:16px'>"
+                        f"{list_items}</div>",
+                        unsafe_allow_html=True
+                    )
+
 
 
         # ── Comparison mode ───────────────────────────────
@@ -915,7 +1051,7 @@ if image is not None:
             vit_level,  vit_color,  vit_icon  = get_risk_level(vit_risk)
             enet_level, enet_color, enet_icon = get_risk_level(enet_risk)
 
-            st.subheader("Model Comparison")
+            section_header("Model Comparison")
             col_vit, col_enet = st.columns(2)
 
             with col_vit:
@@ -943,13 +1079,13 @@ if image is not None:
                 )
 
             st.divider()
-            st.subheader("Attention Map (ViT)")
+            section_header("Attention Map (ViT)")
             c1, c2 = st.columns(2)
             c1.image(display_img, caption="Preprocessed", width=250)
             c2.image(overlay, caption="ViT Attention map", width=250)
 
             st.divider()
-            st.subheader("Risk Group Distribution — ViT vs EfficientNet")
+            section_header("Risk Group Distribution — ViT vs EfficientNet")
 
             HIGH_RISK   = ["mel", "scc", "bcc"]
             MEDIUM_RISK = ["akiec", "bkl", "nv"]
@@ -1006,10 +1142,14 @@ if image is not None:
             "Always consult a qualified dermatologist."
         )
 
+
+
 # ── PDF Report (outside analyse block) ───────────────────
-if st.session_state.get("results") is not None and st.session_state.results.get("model_label") != "Comparison":
-    st.divider()
-    st.subheader("Generate Report")
+# ── PDF Report (outside analyse block) ───────────────────
+if (st.session_state.get("results") is not None
+    and st.session_state.results.get("model_label") != "Comparison"
+    and image is not None
+    and st.session_state.get("analysis_done", False)):
 
     import io
     import matplotlib
@@ -1381,6 +1521,31 @@ if st.session_state.get("results") is not None and st.session_state.results.get(
             key="download_pdf_main"
         )
         st.success("Report ready! Click above to download.")
+
+# Footer
+st.markdown("""
+<div style="margin-top:48px; padding:24px 32px;
+     border-top:1px solid #1E3A5F; text-align:center">
+    <div style="display:flex; justify-content:center; align-items:center;
+         gap:8px; margin-bottom:8px">
+        <div style="width:6px; height:6px; background:#00B4D8;
+             border-radius:50%"></div>
+        <span style="color:white; font-size:15px; font-weight:700;
+            letter-spacing:1px">DermAI</span>
+        <div style="width:6px; height:6px; background:#00B4D8;
+             border-radius:50%"></div>
+    </div>
+    <p style="color:#4A5568; font-size:12px; margin:0">
+        GWU DATS 6303 &nbsp;·&nbsp; Group 4 &nbsp;·&nbsp; Spring 2026
+        &nbsp;·&nbsp; For educational purposes only
+    </p>
+    <p style="color:#2A3548; font-size:11px; margin:6px 0 0 0">
+        Powered by ViT-base-patch16-224 &nbsp;·&nbsp;
+        HAM10000 + Supplementary Data &nbsp;·&nbsp;
+        13,215 training images &nbsp;·&nbsp; 10 classes
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Demo mode image loader
 if "demo_mode" in dir() and demo_mode and selected_demo:
