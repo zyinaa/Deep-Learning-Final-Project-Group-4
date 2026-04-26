@@ -1,8 +1,8 @@
 <p align="center">
   <img src="Code/app/icon.png" alt="DermAI Logo" width="120"/>
-  <br/>
-  <h3 align="center">DermAI</h3>
 </p>
+
+<h1 align="center">DermAI</h1>
 <p align="center">
   <b>Skin Cancer Risk Classification System</b><br/>
   <sub>Powered by Vision Transformer (ViT-base-patch16-224)</sub>
