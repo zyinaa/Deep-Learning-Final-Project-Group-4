@@ -590,7 +590,7 @@ with st.sidebar:
         </div>
         <div style="display:flex; justify-content:space-between">
             <span style='color:#8899AA; font-size:15px'>Training Images</span>
-            <span style='color:white; font-size:15px; font-weight:600'>13,215</span>
+            <span style='color:white; font-size:15px; font-weight:600'>10,357</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:6px">
             <span style='color:#8899AA; font-size:15px'>Mel Recall</span>
@@ -1688,7 +1688,7 @@ st.markdown("""
     <p style="color:#2A3548; font-size:11px; margin:6px 0 0 0">
         Powered by ViT-base-patch16-224 &nbsp;·&nbsp;
         HAM10000 + Supplementary Data &nbsp;·&nbsp;
-        13,215 training images &nbsp;·&nbsp; 10 classes
+        10,357 training images &nbsp;·&nbsp; 10 classes
     </p>
 </div>
 """, unsafe_allow_html=True)
