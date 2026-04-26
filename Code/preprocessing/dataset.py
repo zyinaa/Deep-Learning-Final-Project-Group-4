@@ -247,15 +247,46 @@ class SkinDataset(Dataset):
             stratify=kaggle_trainval["dx"]
         )
 
-        # ── Combine HAM10000 + Kaggle ─────────────────────
+        # ── Load ISIC2020 melanoma ────────────────────────
+        isic2020_base = os.path.join(
+            os.path.dirname(kaggle_base), "isic2020"
+        )
+        isic2020_df = pd.DataFrame(columns=["image_path", "dx", "source"])
+        isic2020_metadata = os.path.join(isic2020_base, "train-metadata.csv")
+        isic2020_img_dir  = os.path.join(isic2020_base, "train-image", "image")
+
+        if os.path.exists(isic2020_metadata):
+            isic_meta = pd.read_csv(isic2020_metadata)
+            mel_rows  = isic_meta[isic_meta["target"] == 1].reset_index(drop=True)
+            rows = []
+            for _, row in mel_rows.iterrows():
+                img_path = os.path.join(isic2020_img_dir, f"{row['isic_id']}.jpg")
+                if os.path.exists(img_path):
+                    rows.append({"image_path": img_path, "dx": "mel", "source": "isic2020"})
+            isic2020_df = pd.DataFrame(rows)
+            print(f"Loaded ISIC2020 melanoma: {len(isic2020_df)} images")
+
+            # Split ISIC2020 80/20 into train/val
+            from sklearn.model_selection import train_test_split as tts
+            isic_train, isic_val = tts(
+                isic2020_df, test_size=0.2, random_state=42
+            )
+            print(f"ISIC2020 train: {len(isic_train)}  val: {len(isic_val)}")
+        else:
+            isic_train = pd.DataFrame(columns=["image_path", "dx", "source"])
+            isic_val   = pd.DataFrame(columns=["image_path", "dx", "source"])
+
+        # ── Combine HAM10000 + Kaggle + ISIC2020 ──────────
         split_map = {
             "train": pd.concat([
                 ham_train[["image_path", "dx", "source"]],
-                kaggle_train[["image_path", "dx", "source"]]
+                kaggle_train[["image_path", "dx", "source"]],
+                isic_train[["image_path", "dx", "source"]]
             ], ignore_index=True),
             "val": pd.concat([
                 ham_val[["image_path", "dx", "source"]],
-                kaggle_val[["image_path", "dx", "source"]]
+                kaggle_val[["image_path", "dx", "source"]],
+                isic_val[["image_path", "dx", "source"]]
             ], ignore_index=True),
             "test": pd.concat([
                 ham_test[["image_path", "dx", "source"]],

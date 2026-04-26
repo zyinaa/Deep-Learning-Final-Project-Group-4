@@ -245,10 +245,10 @@ def predict_vit(model, tensor, device, clinical_mode=False):
     if clinical_mode:
         # Optimal thresholds from ROC analysis (Youden's J)
         CLINICAL_THRESHOLDS = {
-            "mel":   0.1831,
-            "bcc":   0.1245,
-            "scc":   0.0635,
-            "akiec": 0.0347,
+            "mel":   0.1174,
+            "bcc":   0.1308,
+            "scc":   0.0735,
+            "akiec": 0.0594,
         }
         # If any high-risk class exceeds its threshold, it becomes top prediction
         for cls, thresh in CLINICAL_THRESHOLDS.items():
@@ -270,10 +270,10 @@ def predict_efficientnet(model, tensor, device, clinical_mode=False):
 
     if clinical_mode:
         ENET_THRESHOLDS = {
-            "mel":   0.1030,
-            "bcc":   0.0570,
-            "scc":   0.0586,
-            "akiec": 0.1453,
+            "mel":   0.1523,
+            "bcc":   0.0498,
+            "scc":   0.0780,
+            "akiec": 0.1208,
         }
         for cls, thresh in ENET_THRESHOLDS.items():
             if probs_dict[cls] >= thresh:
@@ -508,45 +508,58 @@ with st.sidebar:
     st.divider()
 
     # Model Info
+    # Model Info
     if "model_choice" not in dir() or model_choice == "ViT-base (Main Model)":
         arch = "ViT-base-patch16"
+        attn = "Self-Attention"
         if "clinical_mode" in dir() and clinical_mode:
-            f1  = "0.5836"
-            acc = "73%"
+            f1  = "0.6338"
+            acc = "70%"
+            mel_recall = "61%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
+            mel_recall_color = "#00CC88"
         else:
-            f1  = "0.6523"
-            acc = "79%"
+            f1  = "0.6678"
+            acc = "76%"
+            mel_recall = "40%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
-        attn = "Self-Attention"
+            mel_recall_color = "#FFD700"
     elif model_choice == "EfficientNet-B3 (Baseline)":
         arch = "EfficientNet-B3"
+        attn = "N/A"
         if "clinical_mode" in dir() and clinical_mode:
-            f1  = "0.5997"
-            acc = "75.6%"
+            f1  = "0.6305"
+            acc = "71%"
+            mel_recall = "62%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
+            mel_recall_color = "#00CC88"
         else:
-            f1  = "0.6386"
-            acc = "78.2%"
+            f1  = "0.6488"
+            acc = "74%"
+            mel_recall = "43%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
-        attn = "N/A"
+            mel_recall_color = "#FFD700"
     else:
         arch = "ViT + EfficientNet"
+        attn = "Self-Attention"
         if "clinical_mode" in dir() and clinical_mode:
-            f1  = "0.5836 / 0.5997"
-            acc = "73% / 75.6%"
+            f1  = "0.6338 / 0.6305"
+            acc = "70% / 71%"
+            mel_recall = "61% / 62%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
+            mel_recall_color = "#00CC88"
         else:
-            f1  = "0.6523 / 0.6386"
-            acc = "79% / 78.2%"
+            f1  = "0.6678 / 0.6488"
+            acc = "76% / 74%"
+            mel_recall = "40% / 43%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
-        attn = "Self-Attention"
+            mel_recall_color = "#FFD700"
 
     st.markdown(f"""
     <div style="background:#0A1628; border-radius:10px; padding:14px;
@@ -578,6 +591,10 @@ with st.sidebar:
         <div style="display:flex; justify-content:space-between">
             <span style='color:#8899AA; font-size:15px'>Training Images</span>
             <span style='color:white; font-size:15px; font-weight:600'>13,215</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+            <span style='color:#8899AA; font-size:15px'>Mel Recall</span>
+            <span style='color:{mel_recall_color}; font-size:15px; font-weight:600'>{mel_recall}</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #1E3A5F">
             <span style='color:#8899AA; font-size:15px'>Mode</span>
@@ -1277,14 +1294,17 @@ if (st.session_state.get("results") is not None
         is_clinical = st.session_state.get("last_clinical_mode", False)
         mode_str    = "Clinical Mode" if is_clinical else "Standard Mode"
         if model_label == "ViT-base":
-            f1_str  = "0.5836" if is_clinical else "0.6523"
-            acc_str = "73%" if is_clinical else "79%"
+            f1_str     = "0.6338" if is_clinical else "0.6678"
+            acc_str    = "70%" if is_clinical else "76%"
+            mel_recall = "61%" if is_clinical else "40%"
         elif model_label == "EfficientNet-B3":
-            f1_str  = "0.5997" if is_clinical else "0.6386"
-            acc_str = "75.6%" if is_clinical else "78.2%"
+            f1_str     = "0.6305" if is_clinical else "0.6488"
+            acc_str    = "71%" if is_clinical else "74%"
+            mel_recall = "62%" if is_clinical else "43%"
         else:
-            f1_str  = "N/A"
-            acc_str = "N/A"
+            f1_str     = "N/A"
+            acc_str    = "N/A"
+            mel_recall = "N/A"
 
         is_comparison = r.get("is_comparison", False)
         enet_probs  = r.get("enet_probs", None)
@@ -1370,6 +1390,7 @@ if (st.session_state.get("results") is not None
             ["Mode",              mode_str],
             ["Test F1",           f1_str],
             ["Test Accuracy",     acc_str],
+            ["Melanoma Recall",  mel_recall],
         ]
         rt = Table(risk_data, colWidths=[8*cm, 8*cm])
         rt.setStyle(TableStyle([
