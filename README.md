@@ -1,6 +1,7 @@
 <p align="center">
   <img src="Code/app/icon.png" alt="DermAI Logo" width="120"/>
-  <h1>DermAI</h1>
+  <br/>
+  <h3 align="center">DermAI</h3>
 </p>
 <p align="center">
   <b>Skin Cancer Risk Classification System</b><br/>
