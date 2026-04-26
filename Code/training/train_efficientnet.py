@@ -116,7 +116,17 @@ def train():
             class_counts[l.item()] += 1
     class_weights = 1.0 / (class_counts + 1e-6)
     class_weights = class_weights / class_weights.sum() * NUM_CLASSES
+
+    # Boost high-risk classes
+    risk_multipliers = torch.ones(NUM_CLASSES)
+    risk_multipliers[1] = 8.0   # mel
+    risk_multipliers[3] = 3.0   # bcc
+    risk_multipliers[4] = 3.0   # akiec
+    risk_multipliers[8] = 2.5   # scc
+    risk_multipliers[6] = 3.0   # df
+    class_weights = class_weights * risk_multipliers
     class_weights = class_weights.to(CONFIG["device"])
+    print("Class weights:", class_weights)
 
     criterion = nn.CrossEntropyLoss(
         weight=class_weights,

@@ -231,7 +231,7 @@ def overlay_attention(img_arr, attn_map):
     heatmap = (heatmap * 255).astype(np.uint8)
     return cv2.addWeighted(img_arr, 0.55, heatmap, 0.45, 0)
 
-def predict_vit(model, tensor, device):
+def predict_vit(model, tensor, device, clinical_mode=False):
     with torch.no_grad():
         outputs = model(
             tensor.to(device),
@@ -239,13 +239,49 @@ def predict_vit(model, tensor, device):
             output_hidden_states=True
         )
         probs = torch.softmax(outputs.logits, dim=-1)[0]
-    return {IDX_TO_LABEL[i]: probs[i].item() for i in range(NUM_CLASSES)}
 
-def predict_efficientnet(model, tensor, device):
+    probs_dict = {IDX_TO_LABEL[i]: probs[i].item() for i in range(NUM_CLASSES)}
+
+    if clinical_mode:
+        # Optimal thresholds from ROC analysis (Youden's J)
+        CLINICAL_THRESHOLDS = {
+            "mel":   0.1831,
+            "bcc":   0.1245,
+            "scc":   0.0635,
+            "akiec": 0.0347,
+        }
+        # If any high-risk class exceeds its threshold, it becomes top prediction
+        for cls, thresh in CLINICAL_THRESHOLDS.items():
+            if probs_dict[cls] >= thresh:
+                # Boost to ensure it becomes the top prediction
+                probs_dict[cls] = max(probs_dict[cls], 0.5)
+        # Renormalize
+        total = sum(probs_dict.values())
+        probs_dict = {k: v/total for k, v in probs_dict.items()}
+
+    return probs_dict
+
+def predict_efficientnet(model, tensor, device, clinical_mode=False):
     with torch.no_grad():
         outputs = model(tensor.to(device))
         probs = torch.softmax(outputs, dim=-1)[0]
-    return {IDX_TO_LABEL[i]: probs[i].item() for i in range(NUM_CLASSES)}
+
+    probs_dict = {IDX_TO_LABEL[i]: probs[i].item() for i in range(NUM_CLASSES)}
+
+    if clinical_mode:
+        ENET_THRESHOLDS = {
+            "mel":   0.1030,
+            "bcc":   0.0570,
+            "scc":   0.0586,
+            "akiec": 0.1453,
+        }
+        for cls, thresh in ENET_THRESHOLDS.items():
+            if probs_dict[cls] >= thresh:
+                probs_dict[cls] = max(probs_dict[cls], 0.5)
+        total = sum(probs_dict.values())
+        probs_dict = {k: v/total for k, v in probs_dict.items()}
+
+    return probs_dict
 
 # ── Sidebar ───────────────────────────────────────────────
 with st.sidebar:
@@ -414,6 +450,26 @@ with st.sidebar:
     confidence_threshold = 0.30
 
     st.divider()
+    st.markdown("""
+    <div style="margin-bottom:8px">
+        <p style="color:#FF2D2D; font-size:14px; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase; margin:0">
+            Clinical Mode
+        </p>
+        <p style="color:#8899AA; font-size:12px; margin:4px 0 0 0">
+            Lowers threshold for high-risk classes
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    clinical_mode = st.toggle("Enable clinical mode", value=False)
+
+    # Reset results when clinical mode changes
+    if st.session_state.get("last_clinical_mode") != clinical_mode:
+        st.session_state.results = None
+        st.session_state.analysis_done = False
+        st.session_state.last_clinical_mode = clinical_mode
+
+    st.divider()
 
     # Demo Mode
     st.markdown("""
@@ -432,11 +488,10 @@ with st.sidebar:
 
     if demo_mode:
         demo_images = {
-            "Melanoma (High Risk)":        "data/raw/ham10000/HAM10000_images_part_1/ISIC_0025964.jpg",
-            "Melanocytic Nevi (Low Risk)":  "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024306.jpg",
-            "Basal Cell Carcinoma":         "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024310.jpg",
-            "Benign Keratosis":             "data/raw/ham10000/HAM10000_images_part_1/ISIC_0024307.jpg",
-            "Healthy Skin":                 "data/raw/kaggle_diseases/Oily-Dry-Skin-Types/train/normal/1 (1).jpg",
+            "High Risk Case":     "data/raw/ham10000/HAM10000_images_part_2/ISIC_0033831.jpg",
+            "Elevated Risk Case": "data/raw/ham10000/HAM10000_images_part_2/ISIC_0030249.jpg",
+            "Moderate Risk Case": "data/raw/ham10000/HAM10000_images_part_2/ISIC_0033708.jpg",
+            "Low Risk Case":      "data/raw/ham10000/HAM10000_images_part_1/ISIC_0026532.jpg",
         }
         selected_demo = st.selectbox(
             "Select a demo case:",
@@ -455,18 +510,42 @@ with st.sidebar:
     # Model Info
     if "model_choice" not in dir() or model_choice == "ViT-base (Main Model)":
         arch = "ViT-base-patch16"
-        f1   = "0.7652"
-        acc  = "86%"
+        if "clinical_mode" in dir() and clinical_mode:
+            f1  = "0.5836"
+            acc = "73%"
+            mode_label = "Clinical Mode"
+            mode_color = "#FF2D2D"
+        else:
+            f1  = "0.6523"
+            acc = "79%"
+            mode_label = "Standard Mode"
+            mode_color = "#00B4D8"
         attn = "Self-Attention"
     elif model_choice == "EfficientNet-B3 (Baseline)":
         arch = "EfficientNet-B3"
-        f1   = "0.7440"
-        acc  = "83%"
+        if "clinical_mode" in dir() and clinical_mode:
+            f1  = "0.5997"
+            acc = "75.6%"
+            mode_label = "Clinical Mode"
+            mode_color = "#FF2D2D"
+        else:
+            f1  = "0.6386"
+            acc = "78.2%"
+            mode_label = "Standard Mode"
+            mode_color = "#00B4D8"
         attn = "N/A"
     else:
         arch = "ViT + EfficientNet"
-        f1   = "0.7652 / 0.7440"
-        acc  = "86% / 83%"
+        if "clinical_mode" in dir() and clinical_mode:
+            f1  = "0.5836 / 0.5997"
+            acc = "73% / 75.6%"
+            mode_label = "Clinical Mode"
+            mode_color = "#FF2D2D"
+        else:
+            f1  = "0.6523 / 0.6386"
+            acc = "79% / 78.2%"
+            mode_label = "Standard Mode"
+            mode_color = "#00B4D8"
         attn = "Self-Attention"
 
     st.markdown(f"""
@@ -499,6 +578,10 @@ with st.sidebar:
         <div style="display:flex; justify-content:space-between">
             <span style='color:#8899AA; font-size:15px'>Training Images</span>
             <span style='color:white; font-size:15px; font-weight:600'>13,215</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #1E3A5F">
+            <span style='color:#8899AA; font-size:15px'>Mode</span>
+            <span style='color:{mode_color}; font-size:15px; font-weight:600'>{mode_label}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -641,7 +724,7 @@ if image is not None:
         progress.progress(30, text="Running model(s)...")
 
         if model_choice == "ViT-base (Main Model)":
-            probs_dict = predict_vit(vit_model, tensor, device)
+            probs_dict = predict_vit(vit_model, tensor, device, clinical_mode=clinical_mode)
             progress.progress(70, text="Generating attention map...")
             attn_map = get_attention_map(vit_model, tensor, device)
             overlay  = overlay_attention(display_img, attn_map)
@@ -649,7 +732,7 @@ if image is not None:
             model_label = "ViT-base"
 
         elif model_choice == "EfficientNet-B3 (Baseline)":
-            probs_dict = predict_efficientnet(enet_model, tensor, device)
+            probs_dict = predict_efficientnet(enet_model, tensor, device, clinical_mode=clinical_mode)
             show_attention = False
             model_label = "EfficientNet-B3"
             risk_score_e = compute_cancer_risk(probs_dict)
@@ -739,6 +822,17 @@ if image is not None:
                     "Do not attempt to remove or treat the lesion yourself",
                 ]
             },
+            "elevated": {
+                "color": "#FF8C00",
+                "icon": "⚠",
+                "title": "Elevated Risk — Prompt Medical Attention",
+                "actions": [
+                    "Consult a dermatologist within 2–4 weeks",
+                    "Request a dermoscopy evaluation",
+                    "Avoid sun exposure and use SPF 50+ sunscreen",
+                    "Monitor for rapid changes in size, shape, or color",
+                ]
+            },
             "high": {
                 "color": "#FF2D2D",
                 "icon": "✗",
@@ -767,6 +861,8 @@ if image is not None:
                 rec = RECOMMENDATIONS["low"]
             elif risk_score < 50:
                 rec = RECOMMENDATIONS["moderate"]
+            elif risk_score < 75:
+                rec = RECOMMENDATIONS["elevated"]
             else:
                 rec = RECOMMENDATIONS["high"]
 
@@ -888,18 +984,21 @@ if image is not None:
             from reportlab.lib.units import cm
             import io
 
-            HIGH_RISK   = ["mel", "scc", "bcc"]
-            MEDIUM_RISK = ["akiec", "bkl", "nv"]
-            LOW_RISK    = ["df", "vasc", "tinea", "normal"]
+            HIGH_RISK     = ["mel", "scc"]
+            ELEVATED_RISK = ["bcc", "akiec"]
+            MEDIUM_RISK   = ["bkl", "nv"]
+            LOW_RISK      = ["df", "vasc", "tinea", "normal"]
 
-            high_prob   = sum(probs_dict.get(c, 0) for c in HIGH_RISK)
-            medium_prob = sum(probs_dict.get(c, 0) for c in MEDIUM_RISK)
-            low_prob    = sum(probs_dict.get(c, 0) for c in LOW_RISK)
+            high_prob     = sum(probs_dict.get(c, 0) for c in HIGH_RISK)
+            elevated_prob = sum(probs_dict.get(c, 0) for c in ELEVATED_RISK)
+            medium_prob   = sum(probs_dict.get(c, 0) for c in MEDIUM_RISK)
+            low_prob      = sum(probs_dict.get(c, 0) for c in LOW_RISK)
 
             groups = [
-                ("High Risk",   HIGH_RISK,   ["#E24B4A","#C0392B","#922B21"],   "#E24B4A", high_prob),
-                ("Medium Risk", MEDIUM_RISK, ["#EF9F27","#F0B429","#F5C842"],   "#EF9F27", medium_prob),
-                ("Low Risk",    LOW_RISK,    ["#1D9E75","#27AE60","#2ECC71","#58D68D"], "#1D9E75", low_prob),
+                ("High Risk",     HIGH_RISK,     ["#FF2D2D","#CC0000"],             "#FF2D2D", high_prob),
+                ("Elevated Risk", ELEVATED_RISK, ["#FF8C00","#CC6600"],             "#FF8C00", elevated_prob),
+                ("Moderate Risk", MEDIUM_RISK,   ["#FFD700","#CCA800"],             "#FFD700", medium_prob),
+                ("Low Risk",      LOW_RISK,      ["#00CC88","#00AA70","#008855","#006640"], "#00CC88", low_prob),
             ]
 
             section_header("Class Probabilities")
@@ -1087,54 +1186,61 @@ if image is not None:
             st.divider()
             section_header("Risk Group Distribution — ViT vs EfficientNet")
 
-            HIGH_RISK   = ["mel", "scc", "bcc"]
-            MEDIUM_RISK = ["akiec", "bkl", "nv"]
-            LOW_RISK    = ["df", "vasc", "tinea", "normal"]
+            HIGH_RISK     = ["mel", "scc"]
+            ELEVATED_RISK = ["bcc", "akiec"]
+            MEDIUM_RISK   = ["bkl", "nv"]
+            LOW_RISK      = ["df", "vasc", "tinea", "normal"]
 
             import matplotlib.pyplot as plt
+            import io, base64
 
-            fig, axes = plt.subplots(2, 3, figsize=(14, 9))
-            fig.patch.set_facecolor("#0E1117")
+            group_config = [
+                ("High Risk",     HIGH_RISK,     ["#FF2D2D","#CC0000"],             "#FF2D2D"),
+                ("Elevated Risk", ELEVATED_RISK, ["#FF8C00","#CC6600"],             "#FF8C00"),
+                ("Moderate Risk", MEDIUM_RISK,   ["#FFD700","#CCA800"],             "#FFD700"),
+                ("Low Risk",      LOW_RISK,      ["#00CC88","#00AA70","#008855","#006640"], "#00CC88"),
+            ]
 
-            for row, (pdict, model_name) in enumerate([
-                (vit_probs, "ViT-base"),
-                (enet_probs, "EfficientNet-B3")
-            ]):
-                high_vals   = [pdict.get(c, 0) for c in HIGH_RISK]
-                med_vals    = [pdict.get(c, 0) for c in MEDIUM_RISK]
-                low_vals    = [pdict.get(c, 0) for c in LOW_RISK]
-                high_labels = [CLASS_INFO[c]["name"] for c in HIGH_RISK]
-                med_labels  = [CLASS_INFO[c]["name"] for c in MEDIUM_RISK]
-                low_labels  = [CLASS_INFO[c]["name"] for c in LOW_RISK]
+            for model_name, pdict in [("ViT-base", vit_probs), ("EfficientNet-B3", enet_probs)]:
+                st.markdown(f"<div style='color:white; font-size:16px; font-weight:700; margin:16px 0 8px 0'>{model_name}</div>", unsafe_allow_html=True)
+                cols = st.columns(4)
+                for col, (gname, classes, colors, tcolor) in zip(cols, group_config):
+                    gprob = sum(pdict.get(c, 0) for c in classes)
+                    vals  = [max(pdict.get(c, 0), 0.001) for c in classes]
 
-                high_prob = sum(high_vals)
-                med_prob  = sum(med_vals)
-                low_prob  = sum(low_vals)
+                    fig, ax = plt.subplots(figsize=(3, 3))
+                    fig.patch.set_alpha(0)
+                    ax.set_facecolor("none")
 
-                for col, (vals, labels, colors, title, color) in enumerate([
-                    (high_vals, high_labels, ["#E24B4A","#D85A30","#C0392B"],
-                     f"High Risk\n{high_prob*100:.1f}%", "#E24B4A"),
-                    (med_vals,  med_labels,  ["#EF9F27","#F0B429","#F5C842"],
-                     f"Medium Risk\n{med_prob*100:.1f}%", "#EF9F27"),
-                    (low_vals,  low_labels,  ["#1D9E75","#27AE60","#2ECC71","#58D68D"],
-                     f"Low Risk\n{low_prob*100:.1f}%", "#1D9E75"),
-                ]):
-                    axes[row][col].pie(
-                        vals, labels=labels, colors=colors,
-                        autopct=lambda p: f"{p:.1f}%" if p > 1 else "",
-                        startangle=90,
-                        textprops={"color": "white", "fontsize": 8},
-                        wedgeprops={"edgecolor": "#0E1117", "linewidth": 2}
-                    )
-                    axes[row][col].set_title(
-                        f"{model_name}\n{title}",
-                        color=color, fontsize=10, fontweight="bold"
-                    )
-                    axes[row][col].set_facecolor("#0E1117")
+                    ax.pie(vals, colors=colors, startangle=90,
+                           wedgeprops={"edgecolor": "none", "linewidth": 0, "width": 0.55})
 
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close()
+                    center = plt.Circle((0,0), 0.42, fc="#0A1628", zorder=10)
+                    ax.add_patch(center)
+                    ax.text(0, 0.08, f"{gprob*100:.0f}%", ha="center", va="center",
+                           fontsize=18, fontweight="bold", color="white", zorder=11)
+                    ax.text(0, -0.18, "of total", ha="center", va="center",
+                           fontsize=9, color="#8899AA", zorder=11)
+
+                    plt.tight_layout()
+                    buf = io.BytesIO()
+                    plt.savefig(buf, format="png", transparent=True,
+                               bbox_inches="tight", dpi=100)
+                    buf.seek(0)
+                    img_b64 = base64.b64encode(buf.read()).decode()
+                    plt.close()
+
+                    with col:
+                        # Build legend
+                        legend_html = "".join([
+                            f"<div style='display:flex; align-items:center; gap:6px; margin:4px 0'>"                            f"<div style='width:10px; height:10px; background:{c}; border-radius:2px; flex-shrink:0'></div>"                            f"<span style='color:white; font-size:13px'>{CLASS_INFO[cls]['name']}: {pdict.get(cls,0)*100:.1f}%</span>"                            f"</div>"
+                            for cls, c in zip(classes, colors)
+                        ])
+                        st.markdown(
+                            f"<div style='text-align:center'>"                            f"<div style='color:{tcolor}; font-size:15px; font-weight:700; margin-bottom:4px'>{gname}</div>"                            f"<img src='data:image/png;base64,{img_b64}' style='width:160px; height:160px'/>"                            f"<div style='text-align:left; margin-top:8px'>{legend_html}</div>"                            f"</div>",
+                            unsafe_allow_html=True
+                        )
+
 
         st.divider()
         st.info(
@@ -1168,17 +1274,31 @@ if (st.session_state.get("results") is not None
         top_cls     = r["top_cls"]
         confidence  = r["confidence"]
         model_label = r["model_label"]
+        is_clinical = st.session_state.get("last_clinical_mode", False)
+        mode_str    = "Clinical Mode" if is_clinical else "Standard Mode"
+        if model_label == "ViT-base":
+            f1_str  = "0.5836" if is_clinical else "0.6523"
+            acc_str = "73%" if is_clinical else "79%"
+        elif model_label == "EfficientNet-B3":
+            f1_str  = "0.5997" if is_clinical else "0.6386"
+            acc_str = "75.6%" if is_clinical else "78.2%"
+        else:
+            f1_str  = "N/A"
+            acc_str = "N/A"
+
         is_comparison = r.get("is_comparison", False)
         enet_probs  = r.get("enet_probs", None)
         enet_risk   = r.get("enet_risk", None)
         level_text, _, _ = get_risk_level(risk_score)
 
-        HIGH_RISK   = ["mel", "scc", "bcc"]
-        MEDIUM_RISK = ["akiec", "bkl", "nv"]
-        LOW_RISK    = ["df", "vasc", "tinea", "normal"]
-        high_prob   = sum(probs_dict.get(c, 0) for c in HIGH_RISK)
-        medium_prob = sum(probs_dict.get(c, 0) for c in MEDIUM_RISK)
-        low_prob    = sum(probs_dict.get(c, 0) for c in LOW_RISK)
+        HIGH_RISK     = ["mel", "scc"]
+        ELEVATED_RISK = ["bcc", "akiec"]
+        MEDIUM_RISK   = ["bkl", "nv"]
+        LOW_RISK      = ["df", "vasc", "tinea", "normal"]
+        high_prob     = sum(probs_dict.get(c, 0) for c in HIGH_RISK)
+        elevated_prob = sum(probs_dict.get(c, 0) for c in ELEVATED_RISK)
+        medium_prob   = sum(probs_dict.get(c, 0) for c in MEDIUM_RISK)
+        low_prob      = sum(probs_dict.get(c, 0) for c in LOW_RISK)
 
         import matplotlib
         matplotlib.use("Agg")
@@ -1198,11 +1318,11 @@ if (st.session_state.get("results") is not None
         styles = getSampleStyleSheet()
         story  = []
 
-        h1_style = ParagraphStyle("h1", fontSize=16, spaceAfter=16,
+        h1_style = ParagraphStyle("h1", fontSize=13, spaceAfter=8,
                                   fontName="Helvetica-Bold",
                                   textColor=rl_colors.HexColor("#1D3A5F"))
-        h2_style = ParagraphStyle("h2", fontSize=12, spaceAfter=6,
-                                  spaceBefore=12, fontName="Helvetica-Bold",
+        h2_style = ParagraphStyle("h2", fontSize=10, spaceAfter=4,
+                                  spaceBefore=8, fontName="Helvetica-Bold",
                                   textColor=rl_colors.HexColor("#1D3A5F"))
         normal = ParagraphStyle("n", fontSize=10, fontName="Helvetica",
                                textColor=rl_colors.HexColor("#2C2C2A"))
@@ -1247,17 +1367,20 @@ if (st.session_state.get("results") is not None
             ["Most Likely",       CLASS_INFO[top_cls]["name"]],
             ["Confidence",        f"{confidence*100:.1f}%"],
             ["Model",             model_label],
+            ["Mode",              mode_str],
+            ["Test F1",           f1_str],
+            ["Test Accuracy",     acc_str],
         ]
         rt = Table(risk_data, colWidths=[8*cm, 8*cm])
         rt.setStyle(TableStyle([
             ("BACKGROUND",    (0,0), (0,-1), rl_colors.HexColor("#E6F1FB")),
             ("FONTNAME",      (0,0), (0,-1), "Helvetica-Bold"),
             ("FONTNAME",      (1,0), (1,-1), "Helvetica"),
-            ("FONTSIZE",      (0,0), (-1,-1), 10),
+            ("FONTSIZE",      (0,0), (-1,-1), 8),
             ("GRID",          (0,0), (-1,-1), 0.5, rl_colors.HexColor("#CCCCCC")),
-            ("LEFTPADDING",   (0,0), (-1,-1), 8),
-            ("TOPPADDING",    (0,0), (-1,-1), 5),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+            ("LEFTPADDING",   (0,0), (-1,-1), 6),
+            ("TOPPADDING",    (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 3),
             ("ROWBACKGROUNDS",(0,0), (-1,-1),
              [rl_colors.HexColor("#E6F1FB"), rl_colors.white]),
         ]))
@@ -1372,12 +1495,14 @@ if (st.session_state.get("results") is not None
 
         # ── PAGE 2, 3, 4 — Pie charts (one per page) ──────
         pie_groups = [
-            ("High Risk",   HIGH_RISK_C,
-             ["#E24B4A","#C0392B","#922B21"],   "#E24B4A"),
-            ("Medium Risk", MEDIUM_RISK_C,
-             ["#EF9F27","#F0B429","#F5C842"],   "#EF9F27"),
-            ("Low Risk",    LOW_RISK_C,
-             ["#1D9E75","#27AE60","#2ECC71","#58D68D"], "#1D9E75"),
+            ("High Risk",     HIGH_RISK,
+             ["#FF2D2D","#CC0000"],             "#FF2D2D"),
+            ("Elevated Risk", ELEVATED_RISK,
+             ["#FF8C00","#CC6600"],             "#FF8C00"),
+            ("Moderate Risk", MEDIUM_RISK,
+             ["#FFD700","#CCA800"],             "#FFD700"),
+            ("Low Risk",      LOW_RISK,
+             ["#00CC88","#00AA70","#008855","#006640"], "#00CC88"),
         ]
 
         tmp_files = [tmp_scorebar.name]
@@ -1397,7 +1522,7 @@ if (st.session_state.get("results") is not None
             ))
 
             # Pie chart
-            fig_p, ax_p = plt.subplots(figsize=(4, 4))
+            fig_p, ax_p = plt.subplots(figsize=(2.8, 2.8))
             fig_p.patch.set_facecolor("white")
             ax_p.set_facecolor("white")
             vals = [max(probs_dict.get(c, 0), 0.001) for c in classes]
@@ -1433,7 +1558,7 @@ if (st.session_state.get("results") is not None
                 )
 
             row_table = Table(
-                [[RLImage(tmp_p.name, width=5.5*cm, height=5.5*cm), legend_items]],
+                [[RLImage(tmp_p.name, width=4*cm, height=4*cm), legend_items]],
                 colWidths=[6*cm, 10*cm]
             )
             row_table.setStyle(TableStyle([
