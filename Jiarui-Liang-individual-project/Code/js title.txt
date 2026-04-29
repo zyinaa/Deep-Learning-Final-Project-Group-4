@@ -1,0 +1,6 @@
+let img = document.querySelector('img[src*="Uploads"]');
+let node = img;
+for (let i = 0; i < 8; i++) {
+  console.log("LEVEL", i, node.tagName, node.className, node.innerText);
+  node = node.parentElement;
+}

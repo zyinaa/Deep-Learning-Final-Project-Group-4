@@ -1,0 +1,33 @@
+let results = [];
+
+document.querySelectorAll(".images__wrap__grid__item").forEach(item => {
+    let img = item.querySelector("img");
+    if (!img) return;
+
+    let src = img.src;
+    if (!src || !src.includes("Uploads")) return;
+
+    // 关键：直接取这个item的文本（它只对应一个图片）
+    let text = item.innerText
+        .split("\n")
+        .map(x => x.trim())
+        .filter(x =>
+            x.length > 3 &&
+            !x.toLowerCase().includes("advertisement")
+        );
+
+    let title = text[0] || "";
+
+    results.push({
+        image_url: src,
+        title: title
+    });
+});
+
+// 去重
+let unique = {};
+results.forEach(x => unique[x.image_url] = x);
+results = Object.values(unique);
+
+console.log(results);
+copy(results);
