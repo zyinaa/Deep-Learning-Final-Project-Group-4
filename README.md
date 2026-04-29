@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Dataset-HAM10000+ISIC2020-1D9E75?style=flat-square"/>
   <img src="https://img.shields.io/badge/Classes-10-EF9F27?style=flat-square"/>
   <img src="https://img.shields.io/badge/Test_F1-0.6678-E24B4A?style=flat-square"/>
-  <img src="https://img.shields.io/badge/Mel_Recall-61%25_(clinical)-FF2D2D?style=flat-square"/>
+  <img src="https://img.shields.io/badge/HR_Recall-81%25_(clinical)-FF2D2D?style=flat-square"/>
   <img src="https://img.shields.io/badge/GWU-DATS_6303-0D1F3C?style=flat-square"/>
 </p>
 
@@ -40,7 +40,7 @@
 > Live demo running on AWS:
 
 ```
-http://107.22.98.47:8501
+http://34.207.138.130:8501
 ```
 
 > HuggingFace Space (EfficientNet, CPU):
@@ -53,12 +53,14 @@ https://huggingface.co/spaces/zyinaa/skin-cancer-risk-analyser
 
 ## Results
 
-| Model | Mode | Test F1 | Accuracy | Mel Recall |
+| Model | Mode | Test F1 | Accuracy | High Risk Recall |
 |---|---|---|---|---|
-| **ViT-base-patch16-224** | Standard | **0.6678** | **76%** | 40% |
-| **ViT-base-patch16-224** | Clinical | 0.6338 | 70% | **61%** |
-| EfficientNet-B3 | Standard | 0.6488 | 74% | 43% |
-| EfficientNet-B3 | Clinical | 0.6305 | 71% | 62% |
+| **ViT-base-patch16-224** | Standard | **0.6678** | **76%** | 68% |
+| **ViT-base-patch16-224** | Clinical | 0.6338 | 70% | **81%** |
+| EfficientNet-B3 | Standard | 0.6488 | 74% | 58% |
+| EfficientNet-B3 | Clinical | 0.6305 | 71% | 76% |
+
+> **High Risk Recall** = recall across Melanoma + BCC + SCC combined (204 test samples)
 
 > **Clinical Mode** uses ROC-optimized thresholds to prioritize recall for high-risk classes at the cost of overall accuracy — an acceptable trade-off in clinical settings where missing a melanoma is far more dangerous than a false alarm.
 
@@ -68,14 +70,14 @@ https://huggingface.co/spaces/zyinaa/skin-cancer-risk-analyser
 |---|---|---|---|
 | Healthy Skin | Low | 1.00 | 1.00 |
 | Squamous Cell Carcinoma | High | 0.90 | 0.81 |
+| Tinea/Ringworm | Low | 0.80 | 0.83 |
 | Vascular Lesion | Low | 0.82 | 0.78 |
 | Melanocytic Nevi | Moderate | 0.84 | 0.78 |
-| Tinea/Ringworm | Low | 0.80 | 0.83 |
-| Basal Cell Carcinoma | High | 0.43 | 0.86 |
-| Benign Keratosis | Moderate | 0.49 | 0.48 |
 | Dermatofibroma | Low | 0.69 | 0.90 |
-| Actinic Keratosis | Elevated | 0.34 | 0.25 |
+| Benign Keratosis | Moderate | 0.49 | 0.48 |
+| Basal Cell Carcinoma | High | 0.43 | 0.86 |
 | Melanoma | High | 0.37 | 0.40 |
+| Actinic Keratosis | Elevated | 0.34 | 0.25 |
 
 ---
 
@@ -128,7 +130,7 @@ https://huggingface.co/spaces/zyinaa/skin-cancer-risk-analyser
 
 Clinical Mode uses ROC-optimized thresholds (Youden's J) for high-risk classes:
 
-| Class | ViT Threshold | ENet Threshold | TPR (ViT) | AUC (ViT) |
+| Class | ViT Threshold | ENet Threshold | ViT TPR | ViT AUC |
 |---|---|---|---|---|
 | Melanoma | 0.117 | 0.152 | 80% | 0.793 |
 | Basal Cell Carcinoma | 0.131 | 0.050 | 98% | 0.967 |
@@ -230,7 +232,7 @@ kaggle datasets download -d kmader/skin-cancer-mnist-ham10000 -p Code/data/raw/h
 kaggle datasets download -d haroonalam16/20-skin-diseases-dataset -p Code/data/raw/kaggle_diseases --unzip
 kaggle datasets download -d shakyadissanayake/oily-dry-and-normal-skin-types-dataset -p Code/data/raw/kaggle_diseases --unzip
 
-# ISIC 2020 melanoma (for class imbalance)
+# ISIC 2020 melanoma
 kaggle datasets download -d nischaydnk/isic-2020-jpg-224x224-resized -p Code/data/raw/isic2020 --unzip
 ```
 
@@ -248,11 +250,9 @@ streamlit run Code/app/app.py --server.port 8501 --server.address 0.0.0.0
 
 ---
 
-## DermAI Features
+## DermAI App Features
 
 ### Cancer Risk Score
-A weighted probability score (0–100) based on clinical malignancy severity:
-
 | Score | Level | Color |
 |---|---|---|
 | 0–20 | Low Risk | 🟢 Green |
@@ -261,16 +261,16 @@ A weighted probability score (0–100) based on clinical malignancy severity:
 | 75–100 | High Risk | 🔴 Red |
 
 ### Attention Map
-ViT's self-attention weights overlaid on the input image, showing which regions drove the prediction — analogous to the ABCDE criteria used by dermatologists.
+ViT's self-attention weights overlaid on the input image — analogous to the ABCDE criteria used by dermatologists.
 
 ### Clinical Mode
-ROC-optimized thresholds that boost recall for high-risk classes. Toggle in the sidebar.
+ROC-optimized thresholds boosting recall for high-risk classes. Toggle in the sidebar.
 
 ### PDF Report
-Downloadable report including risk summary, group distribution charts, class probability analysis, and model metadata.
+Downloadable report with risk summary, class probability chart, and model metadata.
 
 ### Model Comparison
-Side-by-side comparison between ViT-base (main model) and EfficientNet-B3 (baseline).
+Side-by-side ViT-base vs EfficientNet-B3 with donut charts for both models.
 
 ---
 
