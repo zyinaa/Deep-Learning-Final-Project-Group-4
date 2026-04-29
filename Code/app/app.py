@@ -515,14 +515,14 @@ with st.sidebar:
         if "clinical_mode" in dir() and clinical_mode:
             f1  = "0.6338"
             acc = "70%"
-            mel_recall = "61%"
+            mel_recall = "81%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
             mel_recall_color = "#00CC88"
         else:
             f1  = "0.6678"
             acc = "76%"
-            mel_recall = "40%"
+            mel_recall = "68%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
             mel_recall_color = "#FFD700"
@@ -532,14 +532,14 @@ with st.sidebar:
         if "clinical_mode" in dir() and clinical_mode:
             f1  = "0.6305"
             acc = "71%"
-            mel_recall = "62%"
+            mel_recall = "76%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
             mel_recall_color = "#00CC88"
         else:
             f1  = "0.6488"
             acc = "74%"
-            mel_recall = "43%"
+            mel_recall = "58%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
             mel_recall_color = "#FFD700"
@@ -549,14 +549,14 @@ with st.sidebar:
         if "clinical_mode" in dir() and clinical_mode:
             f1  = "0.6338 / 0.6305"
             acc = "70% / 71%"
-            mel_recall = "61% / 62%"
+            mel_recall = "81% / 76%"
             mode_label = "Clinical Mode"
             mode_color = "#FF2D2D"
             mel_recall_color = "#00CC88"
         else:
             f1  = "0.6678 / 0.6488"
             acc = "76% / 74%"
-            mel_recall = "40% / 43%"
+            mel_recall = "68% / 58%"
             mode_label = "Standard Mode"
             mode_color = "#00B4D8"
             mel_recall_color = "#FFD700"
@@ -593,7 +593,7 @@ with st.sidebar:
             <span style='color:white; font-size:15px; font-weight:600'>10,357</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-            <span style='color:#8899AA; font-size:15px'>Mel Recall</span>
+            <span style='color:#8899AA; font-size:15px'>High Risk Recall</span>
             <span style='color:{mel_recall_color}; font-size:15px; font-weight:600'>{mel_recall}</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #1E3A5F">
@@ -1296,11 +1296,11 @@ if (st.session_state.get("results") is not None
         if model_label == "ViT-base":
             f1_str     = "0.6338" if is_clinical else "0.6678"
             acc_str    = "70%" if is_clinical else "76%"
-            mel_recall = "61%" if is_clinical else "40%"
+            mel_recall = "81%" if is_clinical else "68%"
         elif model_label == "EfficientNet-B3":
             f1_str     = "0.6305" if is_clinical else "0.6488"
             acc_str    = "71%" if is_clinical else "74%"
-            mel_recall = "62%" if is_clinical else "43%"
+            mel_recall = "76%" if is_clinical else "58%"
         else:
             f1_str     = "N/A"
             acc_str    = "N/A"
@@ -1327,10 +1327,10 @@ if (st.session_state.get("results") is not None
         import tempfile, os
         from reportlab.platypus import PageBreak, Image as RLImage
 
-        HIGH_RISK_C   = ["mel", "scc", "bcc"]
-        MEDIUM_RISK_C = ["akiec", "bkl", "nv"]
-        LOW_RISK_C    = ["df", "vasc", "tinea", "normal"]
-
+        HIGH_RISK_C     = ["mel", "scc", "bcc"]
+        ELEVATED_RISK_C = ["akiec"]
+        MEDIUM_RISK_C   = ["bkl", "nv"]
+        LOW_RISK_C      = ["df", "vasc", "tinea", "normal"]
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4,
                                rightMargin=2*cm, leftMargin=2*cm,
@@ -1338,10 +1338,10 @@ if (st.session_state.get("results") is not None
         styles = getSampleStyleSheet()
         story  = []
 
-        h1_style = ParagraphStyle("h1", fontSize=13, spaceAfter=8,
+        h1_style = ParagraphStyle("h1", fontSize=15, spaceAfter=24,
                                   fontName="Helvetica-Bold",
                                   textColor=rl_colors.HexColor("#1D3A5F"))
-        h2_style = ParagraphStyle("h2", fontSize=10, spaceAfter=4,
+        h2_style = ParagraphStyle("h2", fontSize=12, spaceAfter=4,
                                   spaceBefore=8, fontName="Helvetica-Bold",
                                   textColor=rl_colors.HexColor("#1D3A5F"))
         normal = ParagraphStyle("n", fontSize=10, fontName="Helvetica",
@@ -1390,7 +1390,7 @@ if (st.session_state.get("results") is not None
             ["Mode",              mode_str],
             ["Test F1",           f1_str],
             ["Test Accuracy",     acc_str],
-            ["Melanoma Recall",  mel_recall],
+            ["High Risk Recall", mel_recall],
         ]
         rt = Table(risk_data, colWidths=[8*cm, 8*cm])
         rt.setStyle(TableStyle([
@@ -1442,51 +1442,6 @@ if (st.session_state.get("results") is not None
             story.append(Spacer(1, 0.5*cm))
 
         # Risk group summary (no classes column)
-        story.append(Paragraph("Risk Group Summary", h2_style))
-        group_data = [["Group", "Probability"]]
-        group_colors_pdf = {
-            "High Risk":   rl_colors.HexColor("#FCEBEB"),
-            "Medium Risk": rl_colors.HexColor("#FAEEDA"),
-            "Low Risk":    rl_colors.HexColor("#E1F5EE"),
-        }
-        group_text_colors = {
-            "High Risk":   rl_colors.HexColor("#E24B4A"),
-            "Medium Risk": rl_colors.HexColor("#EF9F27"),
-            "Low Risk":    rl_colors.HexColor("#1D9E75"),
-        }
-        group_rows = []
-        for gname, gclasses in [
-            ("High Risk",   HIGH_RISK_C),
-            ("Medium Risk", MEDIUM_RISK_C),
-            ("Low Risk",    LOW_RISK_C),
-        ]:
-            gprob = sum(probs_dict.get(c, 0) for c in gclasses)
-            group_data.append([gname, f"{gprob*100:.1f}%"])
-            group_rows.append(gname)
-
-        gt = Table(group_data, colWidths=[8*cm, 8*cm])
-        gt_style = [
-            ("BACKGROUND",    (0,0), (-1,0), rl_colors.HexColor("#1D3A5F")),
-            ("TEXTCOLOR",     (0,0), (-1,0), rl_colors.white),
-            ("FONTNAME",      (0,0), (-1,0), "Helvetica-Bold"),
-            ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
-            ("FONTSIZE",      (0,0), (-1,-1), 11),
-            ("GRID",          (0,0), (-1,-1), 0.5, rl_colors.HexColor("#CCCCCC")),
-            ("LEFTPADDING",   (0,0), (-1,-1), 10),
-            ("TOPPADDING",    (0,0), (-1,-1), 7),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 7),
-            ("ALIGN",         (1,0), (1,-1), "CENTER"),
-        ]
-        for i, gname in enumerate(group_rows, 1):
-            gt_style.append(("BACKGROUND", (0,i), (-1,i),
-                            group_colors_pdf[gname]))
-            gt_style.append(("TEXTCOLOR", (0,i), (0,i),
-                            group_text_colors[gname]))
-            gt_style.append(("FONTNAME", (0,i), (0,i), "Helvetica-Bold"))
-        gt.setStyle(TableStyle(gt_style))
-        story.append(gt)
-        story.append(Spacer(1, 0.5*cm))
-
         # Detailed probabilities
         story.append(Paragraph("Detailed Class Probabilities", h2_style))
         prob_data = [["Class", "Probability", "Risk Weight"]]
