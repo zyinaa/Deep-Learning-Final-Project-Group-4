@@ -46,7 +46,7 @@ http://34.207.138.130:8501
 > HuggingFace Space (EfficientNet, CPU):
 
 ```
-https://huggingface.co/spaces/zyinaa/skin-cancer-risk-analyser
+https://huggingface.co/spaces/zyinaa/DermAI
 ```
 
 ---
