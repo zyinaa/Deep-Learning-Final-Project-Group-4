@@ -43,7 +43,7 @@
 http://34.207.138.130:8501
 ```
 
-> HuggingFace Space (EfficientNet, CPU):
+> HuggingFace Space (VIT, EfficientNet, CPU):
 
 ```
 https://huggingface.co/spaces/zyinaa/DermAI
